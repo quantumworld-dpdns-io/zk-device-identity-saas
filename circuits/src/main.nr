@@ -39,11 +39,11 @@ fn main(
     matter_spec_version: pub Field,
     is_compliant: pub Field,
 ) {
-    let selector_match = selector == SELECTOR_DAC
-        or selector == SELECTOR_PAI
-        or selector == SELECTOR_PAA
-        or selector == SELECTOR_DEVICE_IDENTITY
-        or selector == SELECTOR_COMPLIANCE;
+    let selector_match = (selector == SELECTOR_DAC)
+        | (selector == SELECTOR_PAI)
+        | (selector == SELECTOR_PAA)
+        | (selector == SELECTOR_DEVICE_IDENTITY)
+        | (selector == SELECTOR_COMPLIANCE);
     constrain selector_match == true;
 
     let ok = if selector == SELECTOR_DAC {
