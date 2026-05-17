@@ -1,0 +1,97 @@
+name: CD Staging
+
+on:
+  push:
+    branches: [dev]
+
+env:
+  CARGO_TERM_COLOR: always
+  GO_VERSION: '1.22'
+  NODE_VERSION: '20'
+  RUST_VERSION: '1.78'
+  REGISTRY: ghcr.io
+  IMAGE_TAG: staging-${{ github.sha }}
+
+jobs:
+  test:
+    uses: ./.github/workflows/robot-framework-tests.yml
+    with:
+      environment: staging
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Go backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/go-backend.Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/go-backend:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/go-backend:staging-latest
+          push: true
+
+      - name: Build and push Rust proxy
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/rust-proxy.Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/rust-proxy:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/rust-proxy:staging-latest
+          push: true
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/frontend.Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/frontend:staging-latest
+          push: true
+
+  deploy:
+    needs: [test, build-and-push]
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Helm deploy to staging
+        run: |
+          helm upgrade --install zk-identity-staging ./deploy/charts/zk-identity \
+            --namespace zk-identity-staging \
+            --create-namespace \
+            --set global.environment=staging \
+            --set global.registry=${{ env.REGISTRY }}/${{ github.repository }} \
+            --set global.tag=${{ env.IMAGE_TAG }} \
+            --set global.postgres.password=${{ secrets.STAGING_DB_PASSWORD }} \
+            --set global.jwt.secret=${{ secrets.STAGING_JWT_SECRET }} \
+            --wait --timeout 10m
+
+  post-deploy-tests:
+    needs: [deploy]
+    uses: ./.github/workflows/robot-framework-tests.yml
+    with:
+      environment: staging

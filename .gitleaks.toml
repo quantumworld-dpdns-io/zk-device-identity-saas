@@ -1,0 +1,14 @@
+title = "zk-device-identity-saas gitleaks config"
+
+[allowlist]
+description = "Allowlisted files and patterns"
+files = [
+    ".env.example",
+    "internal/config/config.go",
+]
+regexes = [
+    "changeme",
+    "replace-with-",
+    "your-",
+    "example-",
+]

@@ -1,0 +1,197 @@
+[
+  {
+    "serial_number": "MTR-DAC-001-A1B2C3D4",
+    "device_type": "matter_controller",
+    "manufacturer": "MatterTech Inc.",
+    "model": "MT-1000",
+    "firmware_version": "2.1.0",
+    "tenant_id": "tenant-a",
+    "device_name": "Living Room Controller",
+    "status": "active",
+    "provisioning_url": "https://provision.mattertech.com/device/MTR-DAC-001",
+    "certificates": {
+      "dac": {
+        "subject": "CN=DAC-001, O=MatterTech Inc., C=US",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "DAC-SN-001",
+        "valid_from": "2025-01-01T00:00:00Z",
+        "valid_to": "2030-12-31T23:59:59Z",
+        "key_usage": ["digitalSignature", "keyCertSign"]
+      },
+      "pai": {
+        "subject": "CN=PAI-001, O=MatterTech Inc., C=US",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "PAI-SN-001",
+        "valid_from": "2025-01-01T00:00:00Z",
+        "valid_to": "2030-12-31T23:59:59Z"
+      }
+    },
+    "attestation": {
+      "type": "dac",
+      "firmware_hash": "a1b2c3d4e5f67890abcdef1234567890",
+      "signature_algorithm": "ECDSA-P256",
+      "nonce": "nonce-001-abc123"
+    },
+    "compliance": {
+      "matter_certified": true,
+      "firmware_verified": true,
+      "last_checked": "2025-06-01T12:00:00Z"
+    }
+  },
+  {
+    "serial_number": "MTR-PAI-002-E5F6G7H8",
+    "device_type": "matter_bridge",
+    "manufacturer": "BridgeConnect Ltd.",
+    "model": "BC-200",
+    "firmware_version": "1.3.2",
+    "tenant_id": "tenant-a",
+    "device_name": "Garage Bridge",
+    "status": "active",
+    "provisioning_url": "https://provision.bridgeconnect.com/device/MTR-PAI-002",
+    "certificates": {
+      "dac": {
+        "subject": "CN=DAC-002, O=BridgeConnect Ltd., C=DE",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "DAC-SN-002",
+        "valid_from": "2025-03-15T00:00:00Z",
+        "valid_to": "2030-03-14T23:59:59Z",
+        "key_usage": ["digitalSignature"]
+      },
+      "pai": {
+        "subject": "CN=PAI-002, O=BridgeConnect Ltd., C=DE",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "PAI-SN-002",
+        "valid_from": "2025-03-15T00:00:00Z",
+        "valid_to": "2030-03-14T23:59:59Z"
+      }
+    },
+    "attestation": {
+      "type": "pai",
+      "firmware_hash": "9876543210fedcbaabcdef0987654321",
+      "signature_algorithm": "ECDSA-P384",
+      "nonce": "nonce-002-xyz789"
+    },
+    "compliance": {
+      "matter_certified": true,
+      "firmware_verified": true,
+      "last_checked": "2025-06-15T08:30:00Z"
+    }
+  },
+  {
+    "serial_number": "MTR-PAA-003-I9J0K1L2",
+    "device_type": "matter_gateway",
+    "manufacturer": "SecureGate Systems",
+    "model": "SG-5000",
+    "firmware_version": "3.0.1",
+    "tenant_id": "tenant-b",
+    "device_name": "Main Gateway",
+    "status": "active",
+    "provisioning_url": "https://provision.securegate.com/device/MTR-PAA-003",
+    "certificates": {
+      "dac": {
+        "subject": "CN=DAC-003, O=SecureGate Systems, C=JP",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "DAC-SN-003",
+        "valid_from": "2025-02-01T00:00:00Z",
+        "valid_to": "2030-01-31T23:59:59Z",
+        "key_usage": ["digitalSignature", "keyCertSign", "cRLSign"]
+      },
+      "pai": {
+        "subject": "CN=PAI-003, O=SecureGate Systems, C=JP",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "PAI-SN-003",
+        "valid_from": "2025-02-01T00:00:00Z",
+        "valid_to": "2030-01-31T23:59:59Z"
+      }
+    },
+    "attestation": {
+      "type": "paa",
+      "firmware_hash": "fedcba0987654321abcdef1234567890",
+      "signature_algorithm": "ECDSA-P521",
+      "nonce": "nonce-003-456def"
+    },
+    "compliance": {
+      "matter_certified": true,
+      "firmware_verified": true,
+      "last_checked": "2025-05-20T16:45:00Z"
+    }
+  },
+  {
+    "serial_number": "MTR-CUST-004-M3N4O5P6",
+    "device_type": "matter_lighting",
+    "manufacturer": "LightingPro GmbH",
+    "model": "LP-100",
+    "firmware_version": "1.0.5",
+    "tenant_id": "tenant-b",
+    "device_name": "Kitchen Light Strip",
+    "status": "pending_attestation",
+    "provisioning_url": "",
+    "certificates": {
+      "dac": {
+        "subject": "CN=DAC-004, O=LightingPro GmbH, C=AT",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "DAC-SN-004",
+        "valid_from": "2025-04-01T00:00:00Z",
+        "valid_to": "2030-03-31T23:59:59Z",
+        "key_usage": ["digitalSignature"]
+      },
+      "pai": {
+        "subject": "CN=PAI-004, O=LightingPro GmbH, C=AT",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "PAI-SN-004",
+        "valid_from": "2025-04-01T00:00:00Z",
+        "valid_to": "2030-03-31T23:59:59Z"
+      }
+    },
+    "attestation": {
+      "type": "dac",
+      "firmware_hash": "1111222233334444aaaa555566667777",
+      "signature_algorithm": "ECDSA-P256",
+      "nonce": "nonce-004-ghi012"
+    },
+    "compliance": {
+      "matter_certified": false,
+      "firmware_verified": false,
+      "last_checked": null
+    }
+  },
+  {
+    "serial_number": "MTR-COMP-005-Q7R8S9T0",
+    "device_type": "matter_thermostat",
+    "manufacturer": "ClimateControl Corp.",
+    "model": "CC-T300",
+    "firmware_version": "1.2.0",
+    "tenant_id": "tenant-a",
+    "device_name": "Office Thermostat",
+    "status": "active",
+    "provisioning_url": "https://provision.climatecontrol.com/device/MTR-COMP-005",
+    "certificates": {
+      "dac": {
+        "subject": "CN=DAC-005, O=ClimateControl Corp., C=CA",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "DAC-SN-005",
+        "valid_from": "2025-05-01T00:00:00Z",
+        "valid_to": "2030-04-30T23:59:59Z",
+        "key_usage": ["digitalSignature", "keyCertSign"]
+      },
+      "pai": {
+        "subject": "CN=PAI-005, O=ClimateControl Corp., C=CA",
+        "issuer": "CN=Matter PAA Root, O=Matter, C=US",
+        "serial_number": "PAI-SN-005",
+        "valid_from": "2025-05-01T00:00:00Z",
+        "valid_to": "2030-04-30T23:59:59Z"
+      }
+    },
+    "attestation": {
+      "type": "dac",
+      "firmware_hash": "abcdef1234567890abcdef1234567890",
+      "signature_algorithm": "ECDSA-P256",
+      "nonce": "nonce-005-jkl345"
+    },
+    "compliance": {
+      "matter_certified": true,
+      "firmware_verified": true,
+      "last_checked": "2025-06-10T10:15:00Z"
+    }
+  }
+]

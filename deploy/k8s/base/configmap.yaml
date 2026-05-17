@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zk-identity-config
+  namespace: zk-identity
+  labels:
+    app.kubernetes.io/name: zk-identity
+    app.kubernetes.io/part-of: zk-identity
+data:
+  POSTGRES_HOST: zk-identity-postgresql
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: zk_device_identity
+  POSTGRES_USER: zkidentity
+  REDIS_HOST: zk-identity-redis-master
+  REDIS_PORT: "6379"
+  QDRANT_HOST: qdrant
+  QDRANT_PORT: "6334"
+  GO_ENV: production
+  NOIR_PROVER_URL: http://noir-prover:3001
+  RISC0_PROVER_URL: http://risc-zero-prover:3002
+  JULIA_ANALYSIS_URL: http://julia-analysis:8090
+  AGENT_SERVICE_URL: http://agent-service:8000
+  GO_BACKEND_URL: http://go-backend:8080
+  RUST_LOG: info
+  PROXY_PORT: "443"
+  NEXT_PUBLIC_API_URL: https://api.zk-identity.example.com

@@ -1,0 +1,31 @@
+{{- range $name, $service := .Values.services }}
+{{- if and $service.enabled $service.hpa $service.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "zk-identity.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "zk-identity.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "zk-identity.fullname" $ }}-{{ $name }}
+  minReplicas: {{ $service.hpa.minReplicas }}
+  maxReplicas: {{ $service.hpa.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ $service.hpa.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ $service.hpa.targetMemoryUtilizationPercentage }}
+{{- end }}
+{{- end }}

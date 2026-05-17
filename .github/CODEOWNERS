@@ -1,0 +1,21 @@
+# Global owners
+* @quantumworld-dpdns-io/core-team
+
+# Go backend
+/internal/ @quantumworld-dpdns-io/go-team
+
+# Rust proxy
+/rust-proxy/ @quantumworld-dpdns-io/rust-team
+
+# Noir circuits
+/circuits/ @quantumworld-dpdns-io/zk-team
+
+# Frontend
+/frontend/ @quantumworld-dpdns-io/frontend-team
+
+# Security (Robot Framework + configs)
+/tests/robot-framework/ @quantumworld-dpdns-io/security-team
+/configs/tetragon/ @quantumworld-dpdns-io/security-team
+
+# Deployment
+/deploy/ @quantumworld-dpdns-io/devops-team

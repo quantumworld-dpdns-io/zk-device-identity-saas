@@ -1,0 +1,51 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zk-identity-ingress
+  namespace: zk-identity
+  labels:
+    app.kubernetes.io/name: zk-identity
+    app.kubernetes.io/environment: production
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/limit-rps: "1000"
+    nginx.ingress.kubernetes.io/limit-connections: "200"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.zk-identity.example.com
+    - app.zk-identity.example.com
+    secretName: zk-identity-tls
+  rules:
+  - host: api.zk-identity.example.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: rust-proxy
+            port:
+              number: 443
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: rust-proxy
+            port:
+              number: 8081
+  - host: app.zk-identity.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000

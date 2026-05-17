@@ -1,0 +1,17 @@
+{{- range $name, $service := .Values.services }}
+{{- if and $service.enabled $service.pdb $service.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "zk-identity.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "zk-identity.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  minAvailable: {{ $service.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "zk-identity.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,5 @@
+robotframework==7.0
+robotframework-requests==0.9.7
+requests==2.31.0
+cryptography==42.0.0
+pyOpenSSL==24.1.0

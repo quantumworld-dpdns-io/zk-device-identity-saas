@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: risc-zero-prover
+  namespace: zk-identity
+  labels:
+    app.kubernetes.io/name: risc-zero-prover
+    app.kubernetes.io/component: prover
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: risc-zero-prover
+      app.kubernetes.io/component: prover
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: risc-zero-prover
+        app.kubernetes.io/component: prover
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: risc-zero-prover
+        image: zk-identity/risc-zero-prover:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3002
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 1
+            memory: 2Gi
+          limits:
+            cpu: 4
+            memory: 8Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 30
+          periodSeconds: 20
