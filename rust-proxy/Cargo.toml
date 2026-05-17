@@ -14,7 +14,7 @@ jsonwebtoken = "9"
 redis = { version = "0.25", features = ["tokio-comp"] }
 rustls = "0.23"
 rustls-pemfile = "2"
-reqwest = { version = "0.12", features = ["rustls-tls"] }
+reqwest = { version = "0.13", features = ["rustls-tls"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 hyper = { version = "1", features = ["full"] }
