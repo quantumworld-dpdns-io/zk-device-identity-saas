@@ -1,0 +1,116 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks secrets scan
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+          report-path: gitleaks-report.sarif
+      - name: Upload Gitleaks results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks-report.sarif
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+      - name: Trivy image scan placeholder
+        run: |
+          echo "Image scanning would be performed against latest staging images"
+          echo "Scan registry images when container registry is configured"
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Go dependency audit
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+        continue-on-error: true
+        if: hashFiles('**/go.mod') != ''
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./... 2>&1 | tee govulncheck-report.txt
+
+      - name: Rust dependency audit
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: '1.78'
+        continue-on-error: true
+        if: hashFiles('**/Cargo.lock') != ''
+        run: |
+          cargo install cargo-audit
+          cargo audit --manifest-path rust-proxy/Cargo.toml 2>&1 | tee cargo-audit-report.txt
+
+      - name: npm dependency audit
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+        continue-on-error: true
+        if: hashFiles('**/package-lock.json') != ''
+        run: |
+          cd frontend
+          npm audit 2>&1 | tee npm-audit-report.txt
+
+      - name: Pip dependency audit
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        continue-on-error: true
+        if: hashFiles('**/requirements.txt') != ''
+        run: |
+          pip install pip-audit
+          pip-audit -r agent-service/requirements.txt 2>&1 | tee pip-audit-report.txt
+
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-reports
+          path: |
+            *-audit-report.txt
+            *-report.txt
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom-cyclonedx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom-cyclonedx.json

@@ -1,15 +1,165 @@
-name: CI
+name: CI Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
     branches: [main]
 
+env:
+  CARGO_TERM_COLOR: always
+  GO_VERSION: '1.22'
+  NODE_VERSION: '20'
+  RUST_VERSION: '1.78'
+
 jobs:
-  build:
+  lint-go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Placeholder build step
-        run: echo "Add your build/test commands here"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: .
+          args: --timeout=5m
+
+  lint-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: clippy
+      - run: cargo clippy --manifest-path rust-proxy/Cargo.toml -- -D warnings
+
+  lint-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run lint
+        working-directory: frontend
+
+  test-go:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: zkidentity
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: zk_device_identity_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: zkidentity
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: zk_device_identity_test
+      - uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.out
+          flags: go
+
+  test-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - run: cargo test --manifest-path rust-proxy/Cargo.toml
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci && npm test
+        working-directory: frontend
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+      - name: Go vulnerability check
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  build:
+    needs:
+      [
+        lint-go,
+        lint-rust,
+        lint-frontend,
+        test-go,
+        test-rust,
+        test-frontend,
+        security-scan,
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Go backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/go-backend.Dockerfile
+          tags: zk-identity/go-backend:latest
+          load: true
+      - name: Build Rust proxy
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/rust-proxy.Dockerfile
+          tags: zk-identity/rust-proxy:latest
+          load: true
+      - name: Build Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/frontend.Dockerfile
+          tags: zk-identity/frontend:latest
+          load: true

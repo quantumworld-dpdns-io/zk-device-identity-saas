@@ -1,0 +1,151 @@
+name: CD Production
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+  IMAGE_TAG: production-${{ github.ref_name }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release tag
+        run: |
+          if ! [[ "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag ${{ github.ref_name }} does not match semver v*.*.*"
+            exit 1
+          fi
+          echo "Tag ${{ github.ref_name }} is valid semver"
+
+  security-scan:
+    uses: ./.github/workflows/security-scan.yml
+
+  robot-tests:
+    uses: ./.github/workflows/robot-framework-tests.yml
+    with:
+      environment: staging
+
+  build-and-push:
+    needs: [verify, security-scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Go backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/go-backend.Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/go-backend:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/go-backend:production-latest
+          push: true
+
+      - name: Build and push Rust proxy
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/rust-proxy.Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/rust-proxy:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/rust-proxy:production-latest
+          push: true
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: images/frontend.Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/frontend:${{ env.IMAGE_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/frontend:production-latest
+          push: true
+
+  deploy:
+    needs: [build-and-push, robot-tests]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://zk-identity.example.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Helm deploy to production
+        run: |
+          helm upgrade --install zk-identity-production ./deploy/charts/zk-identity \
+            --namespace zk-identity-production \
+            --create-namespace \
+            --set global.environment=production \
+            --set global.registry=${{ env.REGISTRY }}/${{ github.repository }} \
+            --set global.tag=${{ env.IMAGE_TAG }} \
+            --set global.postgres.password=${{ secrets.PRODUCTION_DB_PASSWORD }} \
+            --set global.jwt.secret=${{ secrets.PRODUCTION_JWT_SECRET }} \
+            --wait --timeout 15m
+
+  post-deploy-tests:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for deployment stabilization
+        run: sleep 30
+
+      - name: Post-deploy health check
+        run: |
+          curl -f --retry 10 --retry-delay 10 --retry-connrefused \
+            https://zk-identity.example.com/health || exit 1
+
+      - name: Run performance tests
+        run: |
+          echo "Running load tests against production..."
+          if command -v k6 &> /dev/null; then
+            k6 run tests/load/k6-script.js
+          else
+            echo "k6 not installed, skipping performance tests"
+          fi
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "Production deployment `${{ github.ref_name }}` completed successfully :rocket:",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Production Deployment Complete*\nTag: `${{ github.ref_name }}`\nCommit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\nDeployed by: ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,0 +1,30 @@
+name: Robot Framework Security Tests
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+  workflow_dispatch:
+
+jobs:
+  robot-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -r tests/robot-framework/requirements.txt
+      - name: Run API tests
+        run: robot --outputdir output/api --variable BASE_URL:${{ inputs.environment }} tests/robot-framework/suites/api/
+      - name: Run OWASP Top 10 tests
+        run: robot --outputdir output/security --variable BASE_URL:${{ inputs.environment }} tests/robot-framework/suites/security/
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-framework-results
+          path: output/
