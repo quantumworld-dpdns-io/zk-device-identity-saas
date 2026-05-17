@@ -1,10 +1,10 @@
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY mcp-server/requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 WORKDIR /app
