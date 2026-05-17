@@ -1,8 +1,8 @@
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 RUN npm install -g @noir-lang/noirjs @noir-lang/backend_barretenberg
 
-FROM node:20-alpine
+FROM node:26-alpine
 RUN apk add --no-cache ca-certificates tzdata
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
