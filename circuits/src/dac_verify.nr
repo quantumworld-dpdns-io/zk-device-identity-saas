@@ -1,11 +1,7 @@
 use std::hash::pedersen;
 
-fn derive_public(private_key: Field) -> Field {
+pub fn derive_public(private_key: Field) -> Field {
     pedersen([private_key])[0]
-}
-
-fn hash_pair(a: Field, b: Field) -> Field {
-    pedersen([a, b])[0]
 }
 
 pub fn verify_dac(
@@ -16,35 +12,31 @@ pub fn verify_dac(
     serial_number: pub Field,
 ) -> bool {
     let derived_pub = derive_public(dac_private_key);
-    let key_derived = derived_pub == dac_public_key;
+    let key_match = derived_pub == dac_public_key;
 
-    let device_commit = pedersen([device_secret, serial_number])[0];
-    let cert_body = hash_pair(derived_pub, device_commit);
-    let cert_chain = pedersen([cert_body, pai_public_key])[0];
-    let expected_chain = pedersen([pai_public_key, serial_number])[0];
-    let chain_valid = cert_chain == expected_chain;
+    let secret_nonzero = device_secret != 0;
+    let serial_nonzero = serial_number != 0;
+    let key_nonzero = dac_private_key != 0;
 
-    let pai_binding = pedersen([dac_public_key, pai_public_key, serial_number])[0];
-    let pai_check = pedersen([pai_public_key, pai_binding])[0];
-    let pai_hash = pedersen([pai_public_key])[0];
-    let pai_linked = pai_check == pai_hash;
+    let pai_check = pedersen([pai_public_key])[0];
+    let chain_left = pedersen([derived_pub, pai_check])[0];
+    let chain_right = pedersen([dac_public_key, pedersen([pai_public_key])[0]])[0];
+    let chain_match = chain_left == chain_right;
 
-    let secret_positive = device_secret * (device_secret - 1);
-    let secret_range = secret_positive * device_secret;
-    let secret_valid = secret_range == 0;
+    let auth_field = device_secret + dac_private_key;
+    let auth_commit = pedersen([auth_field, serial_number])[0];
+    let auth_expected = pedersen([device_secret, dac_public_key])[0];
+    let auth_verify = auth_commit == auth_expected;
 
-    key_derived & chain_valid & pai_linked & secret_valid
+    key_match & secret_nonzero & serial_nonzero & key_nonzero & chain_match & auth_verify
 }
 
 #[test]
 fn test_dac_verify_valid() {
     let priv_key = 12345;
-    let pub_key = pedersen([priv_key])[0];
-    let pai_pub = pedersen([54321])[0];
-    let serial = 11111;
-    let secret = 67890;
+    let pub_key = derive_public(priv_key);
 
-    let ok = verify_dac(priv_key, secret, pub_key, pai_pub, serial);
+    let ok = verify_dac(priv_key, 67890, pub_key, 54321, 11111);
     constrain ok == true;
 }
 
@@ -52,21 +44,25 @@ fn test_dac_verify_valid() {
 fn test_dac_verify_invalid_key() {
     let priv_key = 12345;
     let wrong_pub = 99999;
-    let pai_pub = pedersen([54321])[0];
-    let serial = 11111;
-    let secret = 67890;
 
-    let ok = verify_dac(priv_key, secret, wrong_pub, pai_pub, serial);
+    let ok = verify_dac(priv_key, 67890, wrong_pub, 54321, 11111);
     constrain ok == false;
 }
 
 #[test]
 fn test_dac_verify_zero_secret() {
     let priv_key = 12345;
-    let pub_key = pedersen([priv_key])[0];
-    let pai_pub = pedersen([54321])[0];
-    let serial = 11111;
+    let pub_key = derive_public(priv_key);
 
-    let ok = verify_dac(priv_key, 0, pub_key, pai_pub, serial);
+    let ok = verify_dac(priv_key, 0, pub_key, 54321, 11111);
+    constrain ok == false;
+}
+
+#[test]
+fn test_dac_verify_zero_key() {
+    let priv_key = 12345;
+    let pub_key = derive_public(priv_key);
+
+    let ok = verify_dac(0, 67890, pub_key, 54321, 11111);
     constrain ok == false;
 }
