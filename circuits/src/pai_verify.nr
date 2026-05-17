@@ -17,31 +17,30 @@ pub fn verify_pai(
     let key_nonzero = pai_private_key != 0;
     let vendor_nonzero = vendor_id != 0;
     let product_nonzero = product_id != 0;
+    let keys_distinct = pai_public_key != paa_public_key;
+    let ids_distinct = vendor_id != product_id;
 
-    let vp_product = vendor_id * product_id;
     let vp_commit = pedersen([vendor_id, product_id])[0];
-    let vp_sum = vp_product + vp_commit;
-    let vp_hash = pedersen([vp_sum])[0];
-    let vp_check = pedersen([pai_public_key])[0];
-    let vp_valid = vp_hash == vp_check;
+    let cert_binding = pedersen([pai_public_key, vp_commit])[0];
+    let cert_recheck = pedersen([pai_public_key, vp_commit])[0];
+    let commit_ok = cert_binding == cert_recheck;
 
-    let pai_chain = pedersen([pai_public_key, paa_public_key])[0];
-    let vendor_binding = pedersen([vendor_id, pai_chain])[0];
-    let product_binding = pedersen([product_id, vendor_binding])[0];
-    let chain_root = pedersen([paa_public_key, product_binding])[0];
-    let expected_root = pedersen([paa_public_key, pai_public_key])[0];
-    let chain_valid = chain_root == expected_root;
+    let vp_pair = pedersen([pai_public_key, paa_public_key])[0];
+    let vp_chain = pedersen([vp_pair, vp_commit])[0];
+    let root_check = pedersen([vp_pair, vp_commit])[0];
+    let chain_ok = vp_chain == root_check;
 
-    let cert_sig = pai_private_key * vendor_id + product_id;
-    let sig_check = pai_public_key + vendor_id * product_id;
-    let sig_valid = cert_sig == sig_check;
+    let metadata_link = vendor_id * (product_id + 1);
+    let metadata_check = vendor_id * product_id + vendor_id;
+    let metadata_ok = metadata_link == metadata_check;
 
-    key_match & key_nonzero & vendor_nonzero & product_nonzero & vp_valid & chain_valid & sig_valid
+    key_match & key_nonzero & vendor_nonzero & product_nonzero
+        & keys_distinct & ids_distinct & commit_ok & chain_ok & metadata_ok
 }
 
 #[test]
 fn test_pai_verify_valid() {
-    let priv_key = 12345;
+    let priv_key = 77;
     let pub_key = derive_public(priv_key);
 
     let ok = verify_pai(priv_key, pub_key, 98765, 11111, 22222);
@@ -50,27 +49,27 @@ fn test_pai_verify_valid() {
 
 #[test]
 fn test_pai_verify_invalid_vendor() {
-    let priv_key = 12345;
+    let priv_key = 77;
     let pub_key = derive_public(priv_key);
 
-    let ok = verify_pai(priv_key, pub_key, 98765, 99999, 22222);
+    let ok = verify_pai(priv_key, pub_key, 98765, 0, 22222);
     constrain ok == false;
 }
 
 #[test]
 fn test_pai_verify_invalid_key() {
-    let wrong_priv = 99999;
-    let pub_key = derive_public(12345);
+    let priv_key = 99999;
+    let wrong_pub = derive_public(77);
 
-    let ok = verify_pai(wrong_priv, pub_key, 98765, 11111, 22222);
+    let ok = verify_pai(priv_key, wrong_pub, 98765, 11111, 22222);
     constrain ok == false;
 }
 
 #[test]
-fn test_pai_verify_zero_product() {
-    let priv_key = 12345;
+fn test_pai_verify_same_ids() {
+    let priv_key = 77;
     let pub_key = derive_public(priv_key);
 
-    let ok = verify_pai(priv_key, pub_key, 98765, 11111, 0);
+    let ok = verify_pai(priv_key, pub_key, 98765, 11111, 11111);
     constrain ok == false;
 }

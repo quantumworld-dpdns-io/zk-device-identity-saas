@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let prover = ProverConfig::new(methods::ZK_IDENTITY_GUEST_ELF)?;
+    let prover = ProverConfig::new(methods::ZK_IDENTITY_GUEST_ELF, methods::ZK_IDENTITY_GUEST_ID);
     tracing::info!(
         "Image ID: {:02x?}",
         prover.image_id.iter().map(|w| w.to_be_bytes()).flatten().collect::<Vec<_>>()
