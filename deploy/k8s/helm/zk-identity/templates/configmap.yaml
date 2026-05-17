@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "zk-identity.fullname" . }}-config
+  labels:
+    {{- include "zk-identity.labels" . | nindent 4 }}
+data:
+  POSTGRES_HOST: {{ .Values.services.go-backend.env | where "name" "POSTGRES_HOST" | first | default (dict "value" "zk-identity-postgresql") | get "value" }}
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: zk_device_identity
+  POSTGRES_USER: zkidentity
+  REDIS_HOST: {{ .Values.services.go-backend.env | where "name" "REDIS_HOST" | first | default (dict "value" "zk-identity-redis-master") | get "value" }}
+  REDIS_PORT: "6379"
+  QDRANT_HOST: {{ .Values.services.go-backend.env | where "name" "QDRANT_HOST" | first | default (dict "value" "qdrant") | get "value" }}
+  QDRANT_PORT: "6334"
+  GO_ENV: {{ .Values.global.environment }}
+  NOIR_PROVER_URL: http://noir-prover:3001
+  RISC0_PROVER_URL: http://risc-zero-prover:3002
+  JULIA_ANALYSIS_URL: http://julia-analysis:8090
+  AGENT_SERVICE_URL: http://agent-service:8000
+  GO_BACKEND_URL: http://go-backend:8080
+  RUST_LOG: {{ .Values.services.rust-proxy.env | where "name" "RUST_LOG" | first | default (dict "value" "info") | get "value" }}
+  NEXT_PUBLIC_API_URL: {{ .Values.services.frontend.env | where "name" "NEXT_PUBLIC_API_URL" | first | default (dict "value" "") | get "value" }}
+  PROXY_PORT: "443"

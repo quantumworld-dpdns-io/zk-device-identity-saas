@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: zk-identity
+  labels:
+    app.kubernetes.io/name: zk-identity
+    app.kubernetes.io/part-of: zk-identity

@@ -1,0 +1,169 @@
+global:
+  environment: staging
+  imagePullPolicy: Always
+
+services:
+  go-backend:
+    replicas: 1
+    env:
+      - name: GO_ENV
+        value: "staging"
+      - name: RUST_LOG
+        value: "debug"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+  rust-proxy:
+    replicas: 1
+    tls:
+      enabled: false
+    env:
+      - name: RUST_LOG
+        value: "debug"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+  frontend:
+    replicas: 1
+    env:
+      - name: NEXT_PUBLIC_API_URL
+        value: "https://api.staging.zk-identity.example.com"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 150m
+        memory: 128Mi
+
+  julia-analysis:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1
+        memory: 2Gi
+
+  risc-zero-prover:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+
+  noir-prover:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1
+        memory: 2Gi
+
+  agent-service:
+    replicas: 1
+    env:
+      - name: LOG_LEVEL
+        value: "DEBUG"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+  mcp-server:
+    replicas: 1
+    env:
+      - name: LOG_LEVEL
+        value: "DEBUG"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+ingress:
+  enabled: true
+  hosts:
+    - host: api.staging.zk-identity.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          serviceName: rust-proxy
+          servicePort: 8081
+    - host: app.staging.zk-identity.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceName: frontend
+          servicePort: 3000
+  tls:
+    - secretName: zk-identity-staging-tls
+      hosts:
+        - api.staging.zk-identity.example.com
+        - app.staging.zk-identity.example.com
+
+postgresql:
+  primary:
+    persistence:
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+redis:
+  master:
+    persistence:
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+qdrant:
+  persistence:
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+monitoring:
+  prometheus:
+    enabled: true
+    retentionDays: 7
+    storageSize: 20Gi
+  grafana:
+    enabled: true
+    adminPassword: admin
+    storageSize: 5Gi

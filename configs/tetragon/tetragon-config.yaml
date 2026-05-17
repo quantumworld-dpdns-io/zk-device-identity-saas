@@ -1,0 +1,11 @@
+tetragon:
+  enabled: true
+  export:
+    file:
+      enabled: true
+      path: /var/log/tetragon/tetragon.log
+    stdout:
+      enabled: true
+  prometheus:
+    enabled: true
+    port: 2112

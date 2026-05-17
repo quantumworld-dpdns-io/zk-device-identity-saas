@@ -1,0 +1,75 @@
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "zk-identity.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "zk-identity.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ $service.replicas }}
+  selector:
+    matchLabels:
+      {{- include "zk-identity.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "zk-identity.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      {{- include "zk-identity.imagePullSecrets" $ | nindent 6 }}
+      containers:
+      - name: {{ $name }}
+        image: "{{ $service.image.repository }}:{{ $service.image.tag }}"
+        imagePullPolicy: {{ $service.image.pullPolicy }}
+        ports:
+        - containerPort: {{ $service.service.targetPort }}
+          name: http
+          protocol: {{ $service.service.protocol }}
+        {{- if eq $name "rust-proxy" }}
+        - containerPort: {{ $service.adminPort }}
+          name: admin
+          protocol: TCP
+        {{- end }}
+        env:
+        {{- if $service.env }}
+        {{- toYaml $service.env | nindent 8 }}
+        {{- end }}
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          {{- toYaml $service.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: {{ $service.probes.liveness.path }}
+            port: {{ $service.service.targetPort }}
+          initialDelaySeconds: {{ $service.probes.liveness.initialDelaySeconds }}
+          periodSeconds: {{ $service.probes.liveness.periodSeconds }}
+        readinessProbe:
+          httpGet:
+            path: {{ $service.probes.readiness.path }}
+            port: {{ $service.service.targetPort }}
+          initialDelaySeconds: {{ $service.probes.readiness.initialDelaySeconds }}
+          periodSeconds: {{ $service.probes.readiness.periodSeconds }}
+        {{- if eq $name "rust-proxy" }}
+        {{- if $service.tls.enabled }}
+        volumeMounts:
+        - name: tls
+          mountPath: /etc/tls
+          readOnly: true
+      volumes:
+      - name: tls
+        secret:
+          secretName: {{ $service.tls.secretName }}
+        {{- end }}
+        {{- end }}
+{{- end }}
+{{- end }}

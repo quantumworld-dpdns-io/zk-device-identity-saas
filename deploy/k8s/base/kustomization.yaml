@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: zk-identity
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- secrets.yaml
+- postgres/statefulset.yaml
+- postgres/service.yaml
+- redis/statefulset.yaml
+- redis/service.yaml
+- qdrant/statefulset.yaml
+- qdrant/service.yaml
+- rust-proxy/deployment.yaml
+- rust-proxy/service.yaml
+- go-backend/deployment.yaml
+- go-backend/service.yaml
+- julia-analysis/deployment.yaml
+- julia-analysis/service.yaml
+- risc-zero-prover/deployment.yaml
+- risc-zero-prover/service.yaml
+- noir-prover/deployment.yaml
+- noir-prover/service.yaml
+- frontend/deployment.yaml
+- frontend/service.yaml
+- agent-service/deployment.yaml
+- agent-service/service.yaml
+- mcp-server/deployment.yaml
+- mcp-server/service.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: zk-identity
+  app.kubernetes.io/managed-by: kustomize

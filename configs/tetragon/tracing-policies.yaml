@@ -1,0 +1,421 @@
+---
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "zk-identity-process-monitor"
+  annotations:
+    description: "Monitor process execution in zk-identity services to detect unauthorized binary execution"
+    severity: "warning"
+spec:
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    args:
+    - index: 0
+      type: "file"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/bin/go"
+        - "/usr/local/go/bin/go"
+      matchActions:
+      - action: Post
+
+---
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "zk-identity-sensitive-file-access"
+  annotations:
+    description: "Monitor reads and writes to sensitive files containing certificates, keys, and secrets"
+    severity: "critical"
+spec:
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    args:
+    - index: 0
+      type: "file"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Postfix"
+        values:
+        - ".pem"
+        - ".key"
+        - ".crt"
+        - ".cert"
+        - ".pfx"
+        - ".p12"
+        - ".jks"
+        - ".keystore"
+        - ".truststore"
+        - ".env"
+      matchActions:
+      - action: Post
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - "/etc/kubernetes/pki"
+        - "/etc/ssl/private"
+        - "/etc/ssh"
+        - "/var/run/secrets"
+        - "/etc/secrets"
+        - "/vault/secrets"
+      matchActions:
+      - action: Sigkill
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/etc/shadow"
+        - "/etc/gshadow"
+        - "/etc/sudoers"
+        - "/root/.ssh/id_rsa"
+        - "/root/.ssh/id_ed25519"
+      matchActions:
+      - action: Sigkill
+
+---
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "zk-identity-network-monitor"
+  annotations:
+    description: "Monitor outbound network connections from identity services to detect data exfiltration or C2 communication"
+    severity: "warning"
+spec:
+  kprobes:
+  - call: "tcp_v4_connect"
+    syscall: false
+    args:
+    - index: 0
+      type: "sock"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchActions:
+      - action: Post
+  - call: "tcp_v6_connect"
+    syscall: false
+    args:
+    - index: 0
+      type: "sock"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchActions:
+      - action: Post
+  - call: "tcp_sendmsg"
+    syscall: false
+    args:
+    - index: 0
+      type: "sock"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchActions:
+      - action: Post
+
+---
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "zk-identity-privilege-escalation"
+  annotations:
+    description: "Detect privilege escalation attempts including setuid/setgid binary execution and unexpected shell spawning"
+    severity: "critical"
+spec:
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/bin/su"
+        - "/bin/su"
+        - "/usr/bin/sudo"
+        - "/usr/bin/newgrp"
+        - "/usr/bin/pkexec"
+        - "/usr/bin/chsh"
+        - "/usr/bin/chfn"
+        - "/usr/bin/gpasswd"
+        - "/usr/bin/passwd"
+        - "/usr/bin/mount"
+        - "/usr/bin/umount"
+        - "/usr/bin/crontab"
+        - "/usr/bin/at"
+        - "/usr/bin/ksu"
+        - "/usr/bin/fusermount"
+        - "/usr/bin/fusermount3"
+      matchActions:
+      - action: Sigkill
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - "/usr/bin/nc."
+        - "/bin/nc."
+        - "/usr/bin/ncat"
+        - "/bin/ncat"
+        - "/usr/bin/netcat"
+        - "/bin/netcat"
+      matchActions:
+      - action: Sigkill
+  - call: "sys_execveat"
+    syscall: true
+    args:
+    - index: 1
+      type: "string"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 1
+        operator: "Equal"
+        values:
+        - "/usr/bin/su"
+        - "/bin/su"
+        - "/usr/bin/sudo"
+        - "/usr/bin/pkexec"
+        - "/usr/bin/newgrp"
+        - "/usr/bin/nc"
+        - "/bin/nc"
+        - "/usr/bin/ncat"
+        - "/bin/ncat"
+      matchActions:
+      - action: Sigkill
+  - call: "sys_setuid"
+    syscall: true
+    args:
+    - index: 0
+      type: "int"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - 0
+      matchActions:
+      - action: Sigkill
+  - call: "sys_setresuid"
+    syscall: true
+    args:
+    - index: 1
+      type: "int"
+    - index: 2
+      type: "int"
+    - index: 3
+      type: "int"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 1
+        operator: "Equal"
+        values:
+        - 0
+      matchActions:
+      - action: Sigkill
+  - call: "sys_setgid"
+    syscall: true
+    args:
+    - index: 0
+      type: "int"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - 0
+      matchActions:
+      - action: Sigkill
+
+---
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "zk-identity-fileless-execution"
+  annotations:
+    description: "Detect fileless execution techniques including memfd_create, process hollowing, and code injection"
+    severity: "critical"
+spec:
+  kprobes:
+  - call: "sys_memfd_create"
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    - index: 1
+      type: "uint32"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - ""
+      matchActions:
+      - action: Sigkill
+  - call: "security_bprm_check"
+    syscall: false
+    args:
+    - index: 0
+      type: "nop"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - ""
+      matchActions:
+      - action: Post
+
+---
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "zk-identity-package-manager-detect"
+  annotations:
+    description: "Alert on unexpected package manager execution in production containers to prevent supply chain attacks"
+    severity: "critical"
+spec:
+  kprobes:
+  - call: "sys_execve"
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "/usr/bin/apt"
+        - "/usr/bin/apt-get"
+        - "/usr/bin/apt-cache"
+        - "/usr/bin/dpkg"
+        - "/usr/bin/apk"
+        - "/usr/bin/yum"
+        - "/usr/bin/dnf"
+        - "/usr/bin/rpm"
+        - "/usr/bin/pip"
+        - "/usr/bin/pip3"
+        - "/usr/bin/pip3.11"
+        - "/usr/bin/pip3.12"
+        - "/usr/bin/npm"
+        - "/usr/bin/yarn"
+        - "/usr/bin/npx"
+        - "/usr/bin/cargo"
+        - "/usr/bin/gem"
+        - "/usr/bin/composer"
+        - "/usr/bin/go install"
+        - "/usr/local/go/bin/go"  # go get/install
+        - "/sbin/apk"
+        - "/usr/sbin/apk"
+        - "/usr/local/bin/pip"
+        - "/usr/local/bin/pip3"
+        - "/usr/local/bin/pip3.11"
+        - "/usr/local/bin/pip3.12"
+        - "/usr/local/bin/npm"
+        - "/usr/local/bin/yarn"
+        - "/usr/local/bin/npx"
+        - "/usr/local/bin/composer"
+      matchActions:
+      - action: Sigkill
+  - call: "sys_execveat"
+    syscall: true
+    args:
+    - index: 1
+      type: "string"
+    selectors:
+    - matchPIDs:
+      - operator: NotIn
+        values:
+        - 1
+      matchArgs:
+      - index: 1
+        operator: "Equal"
+        values:
+        - "/usr/bin/apt"
+        - "/usr/bin/apt-get"
+        - "/usr/bin/dpkg"
+        - "/usr/bin/apk"
+        - "/usr/bin/yum"
+        - "/usr/bin/dnf"
+        - "/usr/bin/rpm"
+        - "/usr/bin/pip"
+        - "/usr/bin/pip3"
+        - "/usr/bin/npm"
+        - "/usr/bin/yarn"
+        - "/usr/bin/npx"
+        - "/sbin/apk"
+        - "/usr/sbin/apk"
+        - "/usr/local/bin/pip"
+        - "/usr/local/bin/pip3"
+        - "/usr/local/bin/npm"
+        - "/usr/local/bin/yarn"
+        - "/usr/local/bin/npx"
+      matchActions:
+      - action: Sigkill

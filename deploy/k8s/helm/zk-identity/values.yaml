@@ -1,0 +1,394 @@
+global:
+  environment: production
+  imageRegistry: ""
+  imagePullSecrets: []
+  imagePullPolicy: IfNotPresent
+
+services:
+  go-backend:
+    enabled: true
+    replicas: 2
+    image:
+      repository: zk-identity/go-backend
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    env:
+      - name: GO_ENV
+        value: "production"
+      - name: POSTGRES_HOST
+        value: "zk-identity-postgresql"
+      - name: POSTGRES_PORT
+        value: "5432"
+      - name: POSTGRES_USER
+        value: "zkidentity"
+      - name: POSTGRES_DB
+        value: "zk_device_identity"
+      - name: REDIS_HOST
+        value: "zk-identity-redis-master"
+      - name: REDIS_PORT
+        value: "6379"
+      - name: QDRANT_HOST
+        value: "qdrant"
+      - name: QDRANT_PORT
+        value: "6334"
+      - name: NOIR_PROVER_URL
+        value: "http://noir-prover:3001"
+      - name: RISC0_PROVER_URL
+        value: "http://risc-zero-prover:3002"
+      - name: JULIA_ANALYSIS_URL
+        value: "http://julia-analysis:8090"
+      - name: AGENT_SERVICE_URL
+        value: "http://agent-service:8000"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+      readiness:
+        path: /health
+        initialDelaySeconds: 5
+        periodSeconds: 10
+
+  rust-proxy:
+    enabled: true
+    replicas: 2
+    image:
+      repository: zk-identity/rust-proxy
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 443
+      targetPort: 443
+      protocol: TCP
+    adminPort: 8081
+    tls:
+      enabled: true
+      secretName: rust-proxy-tls
+      certPath: /etc/tls/cert.pem
+      keyPath: /etc/tls/key.pem
+    env:
+      - name: PROXY_PORT
+        value: "443"
+      - name: GO_BACKEND_URL
+        value: "http://go-backend:8080"
+      - name: REDIS_URL
+        value: "redis://zk-identity-redis-master:6379"
+      - name: RUST_LOG
+        value: "info"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+      readiness:
+        path: /health
+        initialDelaySeconds: 5
+        periodSeconds: 10
+
+  frontend:
+    enabled: true
+    replicas: 2
+    image:
+      repository: zk-identity/frontend
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+    env:
+      - name: NEXT_PUBLIC_API_URL
+        value: "https://api.zk-identity.example.com"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+    probes:
+      liveness:
+        path: /api/health
+        initialDelaySeconds: 15
+        periodSeconds: 20
+      readiness:
+        path: /api/health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+
+  julia-analysis:
+    enabled: true
+    replicas: 1
+    image:
+      repository: zk-identity/julia-analysis
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 8090
+      targetPort: 8090
+      protocol: TCP
+    env: []
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 30
+        periodSeconds: 30
+      readiness:
+        path: /health
+        initialDelaySeconds: 20
+        periodSeconds: 20
+
+  risc-zero-prover:
+    enabled: true
+    replicas: 1
+    image:
+      repository: zk-identity/risc-zero-prover
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 3002
+      targetPort: 3002
+      protocol: TCP
+    env: []
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 8Gi
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 60
+        periodSeconds: 30
+      readiness:
+        path: /health
+        initialDelaySeconds: 30
+        periodSeconds: 20
+
+  noir-prover:
+    enabled: true
+    replicas: 1
+    image:
+      repository: zk-identity/noir-prover
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 3001
+      targetPort: 3001
+      protocol: TCP
+    env: []
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 30
+        periodSeconds: 30
+      readiness:
+        path: /health
+        initialDelaySeconds: 15
+        periodSeconds: 20
+
+  agent-service:
+    enabled: true
+    replicas: 1
+    image:
+      repository: zk-identity/agent-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+    env:
+      - name: GO_BACKEND_URL
+        value: "http://go-backend:8080"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 15
+        periodSeconds: 20
+      readiness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+
+  mcp-server:
+    enabled: true
+    replicas: 1
+    image:
+      repository: zk-identity/mcp-server
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      port: 3003
+      targetPort: 3003
+      protocol: TCP
+    env:
+      - name: GO_BACKEND_URL
+        value: "http://go-backend:8080"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 15
+        periodSeconds: 20
+      readiness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: api.zk-identity.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          serviceName: rust-proxy
+          servicePort: 443
+    - host: app.zk-identity.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceName: frontend
+          servicePort: 3000
+  tls:
+    - secretName: zk-identity-tls
+      hosts:
+        - api.zk-identity.example.com
+        - app.zk-identity.example.com
+
+postgresql:
+  enabled: true
+  auth:
+    username: zkidentity
+    database: zk_device_identity
+  primary:
+    persistence:
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 2Gi
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+qdrant:
+  enabled: true
+  image:
+    repository: qdrant/qdrant
+    tag: latest
+  service:
+    port: 6333
+    grpcPort: 6334
+  persistence:
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2
+      memory: 2Gi
+
+monitoring:
+  prometheus:
+    enabled: false
+    retentionDays: 15
+    storageSize: 50Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+  grafana:
+    enabled: false
+    adminPassword: admin
+    storageSize: 10Gi
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+tetragon:
+  enabled: false
+  namespace: kube-system
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

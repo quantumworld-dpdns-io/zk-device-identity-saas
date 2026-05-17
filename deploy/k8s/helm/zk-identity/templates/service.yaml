@@ -1,0 +1,27 @@
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zk-identity.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "zk-identity.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  type: {{ $service.service.type | default "ClusterIP" }}
+  ports:
+  - port: {{ $service.service.port }}
+    targetPort: {{ $service.service.targetPort }}
+    protocol: {{ $service.service.protocol }}
+    name: http
+  {{- if eq $name "rust-proxy" }}
+  - port: {{ $service.adminPort }}
+    targetPort: {{ $service.adminPort }}
+    protocol: TCP
+    name: admin
+  {{- end }}
+  selector:
+    {{- include "zk-identity.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+{{- end }}
+{{- end }}
