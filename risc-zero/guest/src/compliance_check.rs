@@ -1,6 +1,7 @@
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::time::Duration;
+
+use crate::ComplianceOutput;
 
 /// Known-good firmware hashes (SHA-256 hex digests).
 /// In production these would come from a secure oracle or on-chain registry.
@@ -12,16 +13,7 @@ const KNOWN_FIRMWARE_HASHES: &[&str] = &[
 
 const COMPLIANT_FIRMWARE_VERSIONS: &[&str] = &["1.0.0", "1.1.0", "1.2.0", "2.0.0"];
 
-pub struct ComplianceResult {
-    pub verified: bool,
-    pub manufacturer_allowed: bool,
-    pub compliance_version: String,
-    pub device_config_hash: String,
-    pub timestamp: u64,
-}
-
-// Simple hash function for no_std environments.
-// Uses a FNV-1a-like approach to produce a hex string without external deps.
+/// FNV-1a 64-bit hash for no_std environments.
 fn compute_config_hash(config: &str) -> String {
     use core::num::Wrapping;
 
@@ -31,30 +23,32 @@ fn compute_config_hash(config: &str) -> String {
         hash *= Wrapping(0x100000001b3u64);
     }
 
-    let mut hex = alloc::string::String::with_capacity(16);
     let h = hash.0;
-    hex.extend(
-        [
-            (h >> 56) as u8,
-            (h >> 48) as u8,
-            (h >> 40) as u8,
-            (h >> 32) as u8,
-            (h >> 24) as u8,
-            (h >> 16) as u8,
-            (h >> 8) as u8,
-            h as u8,
-        ]
-        .iter()
-        .flat_map(|b| {
-            let high = b >> 4;
-            let low = b & 0x0f;
-            [
-                if high < 10 { b'0' + high } else { b'a' + high - 10 },
-                if low < 10 { b'0' + low } else { b'a' + low - 10 },
-            ]
-        })
-        .map(char::from),
-    );
+    let bytes = [
+        (h >> 56) as u8,
+        (h >> 48) as u8,
+        (h >> 40) as u8,
+        (h >> 32) as u8,
+        (h >> 24) as u8,
+        (h >> 16) as u8,
+        (h >> 8) as u8,
+        h as u8,
+    ];
+    let mut hex = alloc::string::String::with_capacity(16);
+    for b in bytes {
+        let high = b >> 4;
+        let low = b & 0x0f;
+        hex.push(if high < 10 {
+            (b'0' + high) as char
+        } else {
+            (b'a' + high - 10) as char
+        });
+        hex.push(if low < 10 {
+            (b'0' + low) as char
+        } else {
+            (b'a' + low - 10) as char
+        });
+    }
     hex
 }
 
@@ -69,7 +63,6 @@ fn firmware_version_is_compliant(version: &str) -> bool {
 }
 
 fn extract_manufacturer(config: &str) -> Result<String, &'static str> {
-    // Expect config as JSON-like key=value pairs: "manufacturer=Acme,firmware_version=1.0.0"
     for pair in config.split(',') {
         let trimmed = pair.trim();
         if let Some(value) = trimmed.strip_prefix("manufacturer=") {
@@ -89,27 +82,22 @@ fn extract_firmware_version(config: &str) -> Result<String, &'static str> {
     Ok("unknown".to_string())
 }
 
-/// Verifies device compliance.
+/// Verifies device compliance inside the zkVM.
 ///
-/// # Arguments
-///
-/// * `device_firmware_hash` - SHA-256 hash of the device firmware (private input)
-/// * `device_config` - Comma-separated key=value config string: `manufacturer=Acme,firmware_version=1.0.0`
-/// * `attestation_data` - Opaque attestation blob (logged but not structurally validated here)
-/// * `expected_compliance_version` - The minimum compliance version the device must meet
-/// * `allowed_manufacturers` - List of manufacturer identifiers permitted by the verifier
+/// All parameters except `allowed_manufacturers` and
+/// `expected_compliance_version` are private inputs.
 ///
 /// # Returns
 ///
-/// A `ComplianceResult` with verification status committed to the journal.
-/// The firmware hash itself is never revealed in the public output.
+/// A `ComplianceOutput` committed to the journal. The firmware hash,
+/// attestation data, and raw device config are never revealed publicly.
 pub fn verify_compliance(
     device_firmware_hash: String,
     device_config: String,
     _attestation_data: String,
     expected_compliance_version: String,
     allowed_manufacturers: Vec<String>,
-) -> Result<ComplianceResult, String> {
+) -> Result<ComplianceOutput, String> {
     let config_hash = compute_config_hash(&device_config);
 
     let manufacturer =
@@ -130,15 +118,11 @@ pub fn verify_compliance(
         && version_meets_minimum
         && manufacturer_allowed;
 
-    // Timestamp: approximate uptime seconds (not wall-clock; for wall-clock the
-    // host should inject it as a public input)
-    let timestamp = Duration::from_secs(0).as_secs();
-
-    Ok(ComplianceResult {
+    Ok(ComplianceOutput {
         verified,
         manufacturer_allowed,
         compliance_version: firmware_version,
         device_config_hash: config_hash,
-        timestamp,
+        timestamp: 0,
     })
 }
