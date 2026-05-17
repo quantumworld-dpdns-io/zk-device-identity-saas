@@ -1,0 +1,21 @@
+name = "ZkDeviceAnalysis"
+uuid = "d3f8b4a0-1e2f-47a7-9b8d-5e6f7a8b9c0d"
+version = "0.1.0"
+
+[deps]
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f7"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
+[compat]
+julia = "1.10"
+HTTP = "1"
+JSON = "0.21"
+DataFrames = "1"
+CSV = "0.10"
+Clustering = "0.15"

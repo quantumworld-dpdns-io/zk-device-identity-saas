@@ -10,15 +10,68 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
+target/
 __pycache__/
 *.pyc
 *.class
+*.exe
+*.wasm
+*.so
+*.dylib
 
 # Dependencies
 node_modules/
 vendor/
+.cache/
 
 # Environment
 .env
 .env.*
 !.env.example
+
+# Go
+go.sum
+
+# Rust
+Cargo.lock
+
+# Julia
+Manifest.toml
+*.jl.cov
+
+# Next.js
+.next/
+out/
+
+# Robot Framework
+tests/robot-framework/output/*
+!tests/robot-framework/output/.gitkeep
+
+# Noir
+circuits/target/
+circuits/Prover.toml
+circuits/Verifier.toml
+
+# RISC Zero
+risc-zero/target/
+
+# Docker
+.docker/
+
+# Secrets
+*.key
+*.pem
+*.crt
+*.cert
+!configs/tetragon/*.yaml
+kubeconfig*
+*.kubeconfig
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+*.out
+*.cov
