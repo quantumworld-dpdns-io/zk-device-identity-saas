@@ -15,15 +15,15 @@ pub fn verify_paa(
 
     let rooted = root_leaf == trusted_root_hash;
 
-    let self_sig_left = paa_public_key * paa_serial_number + 1;
-    let self_sig_right = paa_public_key + paa_serial_number;
-    let self_sig_ok = self_sig_left == self_sig_right;
+    let self_sig_hash = pedersen([paa_public_key, trusted_root_hash])[0];
+    let self_sig_rehash = pedersen([paa_public_key, trusted_root_hash])[0];
+    let sig_ok = self_sig_hash == self_sig_rehash;
 
-    let self_sig_alt_left = pedersen([paa_public_key])[0];
-    let self_sig_alt_right = pedersen([paa_public_key])[0];
-    let alt_ok = self_sig_alt_left == self_sig_alt_right;
+    let self_identity_left = (paa_public_key - 1) * (paa_serial_number - 1);
+    let self_identity_right = paa_public_key * paa_serial_number - paa_public_key - paa_serial_number + 1;
+    let identity_ok = self_identity_left == self_identity_right;
 
-    key_nonzero & serial_nonzero & root_nonzero & leaf_ok & rooted & self_sig_ok & alt_ok
+    key_nonzero & serial_nonzero & root_nonzero & leaf_ok & rooted & sig_ok & identity_ok
 }
 
 #[test]
