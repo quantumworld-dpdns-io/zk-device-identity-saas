@@ -77,7 +77,7 @@ fn test_selector_dac() {
     main(
         SELECTOR_DAC,
         priv_key,
-        100,
+        priv_key,
         pub_key,
         54321,
         11111,
@@ -91,9 +91,11 @@ fn test_selector_pai() {
     let pub_key = std::hash::pedersen([priv_key])[0];
     main(
         SELECTOR_PAI,
-        0, 0, 0, 0, 0,
-        priv_key,
+        0, 0, 0,
         pub_key,
+        0,
+        priv_key,
+        98765,
         11111,
         22222,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -102,16 +104,19 @@ fn test_selector_pai() {
 
 #[test]
 fn test_selector_paa() {
+    let paa_pub = 55555;
+    let serial = 77777;
+    let root = std::hash::pedersen([paa_pub, serial])[0];
     main(
         SELECTOR_PAA,
         0, 0, 0, 0, 0,
         0,
+        paa_pub,
         0,
         0,
-        0,
-        55555,
-        77777,
-        0, 0, 0, 0, 0, 0, 0, 0,
+        serial,
+        root,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,
     );
 }
 
@@ -121,13 +126,15 @@ fn test_selector_device_identity() {
     let pub_key = std::hash::pedersen([secret])[0];
     main(
         SELECTOR_DEVICE_IDENTITY,
-        0, 0, 0, 0, 0,
+        0,
+        secret,
+        0, 0, 0,
         0, 0, 0, 0, 0, 0,
         pub_key,
         1,
         3,
-        secret,
-        0, 0, 0, 0,
+        67890,
+        0, 0, 0, 0, 0,
     );
 }
 
@@ -138,8 +145,8 @@ fn test_selector_compliance() {
         0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0,
         0, 0, 0, 0,
-        77777,
-        88888,
+        42,
+        42,
         1,
         2,
         1,
