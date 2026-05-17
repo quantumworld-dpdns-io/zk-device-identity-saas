@@ -12,5 +12,7 @@ axum = { version = "0.7", features = ["json"] }
 tower = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-uuid = { version = "1", features = ["v4", "serde"] }
 anyhow = "1"
+
+[build-dependencies]
+risc0-build = { version = "1.0" }
