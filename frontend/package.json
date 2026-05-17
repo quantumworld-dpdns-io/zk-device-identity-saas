@@ -21,7 +21,7 @@
     "axios": "^1.7.0",
     "next-auth": "^4.24.0",
     "zustand": "^4.5.0",
-    "date-fns": "^3.6.0"
+    "date-fns": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.0",
