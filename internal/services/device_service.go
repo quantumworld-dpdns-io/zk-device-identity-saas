@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -17,6 +18,7 @@ import (
 )
 
 type DeviceService struct {
+	db          *gorm.DB
 	deviceRepo  *repository.DeviceRepository
 	certRepo    *repository.CertificateRepository
 	vectorSvc   *VectorService
@@ -24,12 +26,14 @@ type DeviceService struct {
 }
 
 func NewDeviceService(
+	db *gorm.DB,
 	deviceRepo *repository.DeviceRepository,
 	certRepo *repository.CertificateRepository,
 	vectorSvc *VectorService,
 	cryptoKey string,
 ) *DeviceService {
 	return &DeviceService{
+		db:         db,
 		deviceRepo: deviceRepo,
 		certRepo:   certRepo,
 		vectorSvc:  vectorSvc,
@@ -78,9 +82,8 @@ func (s *DeviceService) RegisterDevice(req *dto.RegisterDeviceRequest, tenantID 
 		Scopes:   "device:attest device:read",
 	}
 
-	if err := s.deviceRepo.Create(apiKeyModel); err != nil {
+	if err := s.db.Create(apiKeyModel).Error; err != nil {
 		slog.Error("failed to store api key", "error", err)
-		return device, apiKey, nil
 	}
 
 	slog.Info("device registered", "device_id", device.ID, "serial_number", device.SerialNumber)
@@ -115,7 +118,11 @@ func (s *DeviceService) UpdateDevice(id uuid.UUID, req *dto.UpdateDeviceRequest)
 		device.Status = req.Status
 	}
 	if req.Metadata != nil {
-		device.Metadata = req.Metadata
+		metaBytes, err := json.Marshal(req.Metadata)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+		device.Metadata = metaBytes
 	}
 
 	if err := s.deviceRepo.Update(device); err != nil {
@@ -138,6 +145,10 @@ func (s *DeviceService) ListDevices(tenantID uuid.UUID, page, pageSize int, seri
 		if err == nil && dev != nil {
 			devices = []models.Device{*dev}
 			total = 1
+		} else {
+			devices = []models.Device{}
+			total = 0
+			err = nil
 		}
 	case manufacturer != "":
 		devices, total, err = s.deviceRepo.SearchByManufacturer(manufacturer, tenantID, page, pageSize)

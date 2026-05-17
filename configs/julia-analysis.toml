@@ -1,0 +1,12 @@
+[server]
+host = "0.0.0.0"
+port = 8090
+
+[analysis]
+anomaly_threshold = 3.0  # z-score threshold
+max_similar_results = 10
+cluster_count = 5
+
+[logging]
+level = "info"
+output = "stdout"

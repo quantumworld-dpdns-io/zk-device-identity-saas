@@ -86,7 +86,7 @@ func (c *QdrantClient) UpsertFingerprint(deviceID string, embedding []float32) e
 		CollectionName: c.collectionName,
 		Points: []*qdrant.PointStruct{
 			{
-				Id: &qdpointID(pointID),
+				Id: newPointID(pointID),
 				Vectors: &qdrant.Vectors{
 					VectorsOptions: &qdrant.Vectors_Vector{
 						Vector: &qdrant.Vector{
@@ -128,8 +128,8 @@ func (c *QdrantClient) SearchSimilar(embedding []float32, limit int) ([]string, 
 	deviceIDs := make([]string, 0, len(resp.GetResult()))
 	for _, point := range resp.GetResult() {
 		if payload, ok := point.GetPayload()["device_id"]; ok {
-			if deviceID, ok := payload.GetKind().(*qdrant.Value_StringValue); ok {
-				deviceIDs = append(deviceIDs, deviceID.StringValue)
+			if val, ok := payload.GetKind().(*qdrant.Value_StringValue); ok {
+				deviceIDs = append(deviceIDs, val.StringValue)
 			}
 		}
 	}
@@ -187,7 +187,7 @@ func (c *QdrantClient) collectionExists(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func qdpointID(id string) *qdrant.PointId {
+func newPointID(id string) *qdrant.PointId {
 	return &qdrant.PointId{
 		PointIdOptions: &qdrant.PointId_Uuid{
 			Uuid: id,

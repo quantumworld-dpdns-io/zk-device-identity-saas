@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
+
 	"github.com/quantumworld-dpdns-io/zk-device-identity-saas/internal/dto"
 	"github.com/quantumworld-dpdns-io/zk-device-identity-saas/internal/models"
 	"github.com/quantumworld-dpdns-io/zk-device-identity-saas/internal/repository"
@@ -106,13 +108,16 @@ func (s *ZKService) GenerateProof(req *dto.GenerateProofRequest) (*models.ProofR
 		return nil, fmt.Errorf("failed to parse proof response: %w", err)
 	}
 
+	proofDataBytes, _ := json.Marshal(noirResp.ProofData)
+	publicInputsBytes, _ := json.Marshal(req.PublicInputs)
+
 	proofRecord := &models.ProofRecord{
-		TenantID:    tenantID,
-		DeviceID:    deviceID,
-		CircuitType: req.CircuitType,
-		ProofData:   noirResp.ProofData,
-		PublicInputs: req.PublicInputs,
-		Status:      noirResp.Status,
+		TenantID:     tenantID,
+		DeviceID:     deviceID,
+		CircuitType:  req.CircuitType,
+		ProofData:    datatypes.JSON(proofDataBytes),
+		PublicInputs: datatypes.JSON(publicInputsBytes),
+		Status:       noirResp.Status,
 	}
 	if noirResp.Status == "" {
 		proofRecord.Status = "generated"

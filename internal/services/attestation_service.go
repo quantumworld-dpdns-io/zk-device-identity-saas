@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log/slog"
@@ -74,17 +75,22 @@ func (s *AttestationService) SubmitAttestation(req *dto.SubmitAttestationRequest
 	}
 
 	attestationData := map[string]interface{}{
-		"dac":        req.DAC,
-		"pai":        req.PAI,
-		"paa":        req.PAA,
-		"nonce":      req.Nonce,
+		"dac":   req.DAC,
+		"pai":   req.PAI,
+		"paa":   req.PAA,
+		"nonce": req.Nonce,
+	}
+
+	dataBytes, err := json.Marshal(attestationData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal attestation data: %w", err)
 	}
 
 	record := &models.AttestationRecord{
 		DeviceID:        deviceID,
 		TenantID:        tenantID,
 		Status:          "pending",
-		AttestationData: attestationData,
+		AttestationData: dataBytes,
 		Signature:       req.Signature,
 	}
 

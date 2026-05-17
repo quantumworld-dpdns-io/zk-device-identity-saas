@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zk-identity-ingress
+  namespace: zk-identity
+  labels:
+    app.kubernetes.io/name: zk-identity
+    app.kubernetes.io/environment: staging
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.staging.zk-identity.example.com
+    - app.staging.zk-identity.example.com
+    secretName: zk-identity-staging-tls
+  rules:
+  - host: api.staging.zk-identity.example.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: staging-rust-proxy
+            port:
+              number: 8081
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: staging-rust-proxy
+            port:
+              number: 8081
+  - host: app.staging.zk-identity.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: staging-frontend
+            port:
+              number: 3000

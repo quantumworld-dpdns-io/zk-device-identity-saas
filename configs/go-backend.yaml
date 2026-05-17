@@ -1,0 +1,70 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 120s
+  grace_period: 15s
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "zkdevice"
+  password: "${DB_PASSWORD}"
+  name: "zkdevice"
+  ssl_mode: "disable"
+  max_open_conns: 25
+  max_idle_conns: 10
+  conn_max_lifetime: 5m
+  conn_max_idle_time: 2m
+
+redis:
+  host: "redis"
+  port: 6379
+  password: "${REDIS_PASSWORD}"
+  db: 0
+  pool_size: 20
+  min_idle_conns: 5
+
+qdrant:
+  host: "qdrant"
+  port: 6333
+  grpc_port: 6334
+  api_key: "${QDRANT_API_KEY}"
+  timeout: 10s
+  vector_size: 768
+  distance: "Cosine"
+
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+
+zk_prover:
+  noir_wasm_path: "/usr/lib/noir_wasm.wasm"
+  risc_zero_image: "risczero/compliance-prover:latest"
+  proof_timeout: 60s
+  max_queue_size: 100
+
+device:
+  max_registrations_per_ip: 10
+  attestation_timeout: 30s
+  session_ttl: 24h
+  cleanup_interval: 1h
+
+analysis:
+  julia_endpoint: "http://julia-analysis:8090"
+  anomaly_threshold: 3.0
+  max_similar_results: 10
+  cluster_count: 5
+
+rate_limiting:
+  enabled: true
+  requests_per_second: 100
+  burst_size: 200
+
+tls:
+  enabled: true
+  cert_file: "/etc/certs/server.crt"
+  key_file: "/etc/certs/server.key"
+  min_version: "1.3"
