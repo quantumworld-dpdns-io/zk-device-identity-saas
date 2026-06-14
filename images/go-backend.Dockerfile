@@ -6,7 +6,7 @@ RUN go mod download 2>/dev/null || true
 COPY . .
 RUN CGO_ENABLED=0 go build -o /server ./cmd/server
 
-FROM alpine:3.19
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates tzdata
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /server /server
