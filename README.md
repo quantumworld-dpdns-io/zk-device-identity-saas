@@ -265,3 +265,7 @@ This project is part of the [quantumworld-dpdns-io](https://github.com/quantumwo
 ## License
 
 [MIT](LICENSE) © 2026 quantumworld-dpdns-io
+
+
+---
+Julia language: [#JuliaLang](https://julialang.org/) | [JuliaLang GitHub](https://github.com/JuliaLang/julia)
