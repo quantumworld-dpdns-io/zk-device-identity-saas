@@ -12,7 +12,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY risc-zero/ .
 RUN cargo build --release -p zk-identity-host
 
-FROM ubuntu:22.04
+FROM ubuntu:26.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates libssl3 tzdata \
     && rm -rf /var/lib/apt/lists/*
