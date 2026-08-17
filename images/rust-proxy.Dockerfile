@@ -13,7 +13,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY rust-proxy/ .
 RUN cargo build --release --bin zk-identity-proxy
 
-FROM alpine:3.19
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates tzdata
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /app/target/release/zk-identity-proxy /server
